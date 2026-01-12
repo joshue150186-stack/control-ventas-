@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Ventas y Comisiones de Café</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        /* Ocultar secciones por defecto */
+        .section-content { display: none; }
+        .section-content.active { display: block; }
+        /* Estilos de impresión */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background-color: white; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Navegación Principal -->
+    <nav class="bg-slate-900 text-white shadow-lg sticky top-0 z-50 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">☕</span>
+                    <span class="font-bold text-xl tracking-tight">CoffeeManager Pro</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <button onclick="nav('dashboard')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-700 transition" id="btn-dashboard">Dashboard</button>
+                        <button onclick="nav('sales')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-700 transition" id="btn-sales">Registrar Venta</button>
+                        <button onclick="nav('inventory')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-700 transition" id="btn-inventory">Inventario Vendedores</button>
+                        <button onclick="nav('liquidation')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-700 transition" id="btn-liquidation">Liquidación POS</button>
+                        <button onclick="nav('settings')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-700 transition" id="btn-settings">Configuración</button>
+                    </div>
+                </div>
+                <!-- Mobile menu button -->
+                <div class="-mr-2 flex md:hidden">
+                    <button onclick="toggleMobileMenu()" class="bg-slate-800 inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-slate-700 focus:outline-none">
+                        <span class="sr-only">Menú</span>
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <button onclick="nav('dashboard')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700">Dashboard</button>
+                <button onclick="nav('sales')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700">Registrar Venta</button>
+                <button onclick="nav('inventory')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700">Inventario</button>
+                <button onclick="nav('liquidation')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700">Liquidación</button>
+                <button onclick="nav('settings')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700">Configuración</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenedor Principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- SECCIÓN 1: DASHBOARD -->
+        <section id="dashboard" class="section-content active fade-in">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-slate-800">Panel de Control</h1>
+                <p class="text-slate-500">Resumen financiero y operativo en tiempo real.</p>
+            </div>
+
+            <!-- KPIs -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-emerald-500">
+                    <p class="text-sm font-medium text-slate-500">Ganancia Neta (Dueño)</p>
+                    <p class="text-2xl font-bold text-slate-800" id="kpi-profit">$0</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                    <p class="text-sm font-medium text-slate-500">Ventas Totales (Ingreso)</p>
+                    <p class="text-2xl font-bold text-slate-800" id="kpi-revenue">$0</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-amber-500">
+                    <p class="text-sm font-medium text-slate-500">Dinero Pendiente en POS</p>
+                    <p class="text-2xl font-bold text-slate-800" id="kpi-debt">$0</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
+                    <p class="text-sm font-medium text-slate-500">Bolsas Vendidas</p>
+                    <p class="text-2xl font-bold text-slate-800" id="kpi-bags">0</p>
+                </div>
+            </div>
+
+            <!-- Gráficos -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h3 class="text-lg font-bold mb-4 text-slate-700">Rendimiento por Vendedor (Bolsas)</h3>
+                    <div class="chart-container">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h3 class="text-lg font-bold mb-4 text-slate-700">Distribución de Ganancia (Modelo Fijo)</h3>
+                    <div class="chart-container">
+                        <canvas id="profitChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 2: REGISTRO DE VENTAS -->
+        <section id="sales" class="section-content fade-in">
+            <div class="max-w-3xl mx-auto">
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="bg-slate-800 px-6 py-4">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <span>🛒</span> Registrar Nueva Venta
+                        </h2>
+                    </div>
+                    <div class="p-8">
+                        <form id="salesForm" onsubmit="handleSaleSubmit(event)">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Vendedor / Agente</label>
+                                    <select id="sale-agent" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50" required>
+                                        <option value="">Seleccione Vendedor...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Punto de Venta (POS)</label>
+                                    <select id="sale-pos" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50" required>
+                                        <option value="">Seleccione Punto de Venta...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-8">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Cantidad de Bolsas Vendidas</label>
+                                <input type="number" id="sale-qty" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-2xl font-bold text-center" min="1" required placeholder="0">
+                                <p class="text-sm text-slate-500 mt-2 text-center" id="sale-preview">Ganancia Neta Estimada: $0</p>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg transition transform hover:scale-[1.01] shadow-md">
+                                Confirmar Venta
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Historial Reciente -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4">Últimas Ventas Registradas</h3>
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Vendedor</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase">Bolsas</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Ganancia (Dueño)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-sales-table" class="bg-white divide-y divide-slate-200">
+                                <!-- Filas dinámicas -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 3: INVENTARIO VENDEDORES -->
+        <section id="inventory" class="section-content fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Gestión de Inventario</h2>
+                    <p class="text-slate-500">Control de bolsas entregadas a vendedores.</p>
+                </div>
+                <button onclick="openModal('agentModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <span>+</span> Nuevo Vendedor
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Vendedor</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Entregadas (Total)</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Vendidas</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Por Rendir (Stock)</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-table" class="bg-white divide-y divide-slate-200">
+                        <!-- JS Populate -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 4: LIQUIDACIÓN POS -->
+        <section id="liquidation" class="section-content fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Liquidación Puntos de Venta</h2>
+                    <p class="text-slate-500">Control de flujo de caja y deudas de los POS.</p>
+                </div>
+                <button onclick="openModal('posModal')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <span>+</span> Nuevo Punto de Venta
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Tabla de Estado POS -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-700">Estado de Cuentas por POS</h3>
+                    </div>
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Punto de Venta</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Ventas Totales</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Deuda Pendiente</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pos-status-table" class="bg-white divide-y divide-slate-200">
+                            <!-- JS Populate -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Formulario Rápido de Liquidación -->
+                <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200 h-fit">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span>💸</span> Registrar Pago (Liquidación)
+                    </h3>
+                    <form onsubmit="handleLiquidation(event)">
+                        <div class="mb-4">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Punto de Venta</label>
+                            <select id="liq-pos" class="w-full p-2 border rounded-md text-sm" required onchange="updateDebtPreview()">
+                                <option value="">Seleccionar...</option>
+                            </select>
+                            <p class="text-xs text-red-500 mt-1 text-right" id="liq-debt-preview">Deuda: $0</p>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Monto Entregado ($)</label>
+                            <input type="number" id="liq-amount" class="w-full p-2 border rounded-md text-sm" required min="1">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Entregado por (Nombre)</label>
+                            <input type="text" id="liq-payer" class="w-full p-2 border rounded-md text-sm" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Recibido por (Nombre)</label>
+                            <input type="text" id="liq-receiver" class="w-full p-2 border rounded-md text-sm" required>
+                        </div>
+                        <button type="submit" class="w-full bg-slate-800 text-white py-2 rounded-md text-sm hover:bg-slate-900 transition">
+                            Confirmar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Historial de Liquidaciones -->
+            <div class="mt-8 bg-white rounded-xl shadow-sm p-6">
+                <h3 class="font-bold text-slate-700 mb-4">Historial de Pagos Recibidos</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm text-left text-slate-500">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+                            <tr>
+                                <th class="px-4 py-3">Fecha/Hora</th>
+                                <th class="px-4 py-3">POS</th>
+                                <th class="px-4 py-3">Monto</th>
+                                <th class="px-4 py-3">Responsables (Entrega / Recibe)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="liquidation-history-table">
+                            <!-- JS Populate -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 5: CONFIGURACIÓN -->
+        <section id="settings" class="section-content fade-in">
+            <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-md">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">Configuración del Negocio</h2>
+                <form onsubmit="saveSettings(event)">
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">Precio Venta (Bolsa)</label>
+                            <input type="number" id="conf-price" class="mt-1 block w-full p-2 border rounded-md bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">Bolsas por Paquete</label>
+                            <input type="number" id="conf-packsize" class="mt-1 block w-full p-2 border rounded-md bg-slate-50">
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4 mb-4">
+                        <h4 class="font-medium text-slate-800 mb-3">Distribución de Ganancias (Base Paquete)</h4>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs text-slate-500">Comisión Vendedor</label>
+                                <input type="number" id="conf-comm-agent" class="mt-1 block w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500">Comisión POS</label>
+                                <input type="number" id="conf-comm-pos" class="mt-1 block w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500">Ganancia Dueño</label>
+                                <input type="number" id="conf-comm-owner" class="mt-1 block w-full p-2 border rounded-md">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Guardar Cambios</button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODALES -->
+    <!-- Modal Nuevo Agente -->
+    <div id="agentModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg w-96 shadow-xl">
+            <h3 class="text-lg font-bold mb-4">Nuevo Vendedor</h3>
+            <input type="text" id="new-agent-name" placeholder="Nombre del Vendedor" class="w-full p-2 border rounded-md mb-4">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('agentModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md">Cancelar</button>
+                <button onclick="addAgent()" class="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo POS -->
+    <div id="posModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg w-96 shadow-xl">
+            <h3 class="text-lg font-bold mb-4">Nuevo Punto de Venta</h3>
+            <input type="text" id="new-pos-name" placeholder="Nombre del POS" class="w-full p-2 border rounded-md mb-4">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('posModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md">Cancelar</button>
+                <button onclick="addPos()" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Entrega Stock -->
+    <div id="stockModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg w-96 shadow-xl">
+            <h3 class="text-lg font-bold mb-2">Entregar Inventario</h3>
+            <p id="stock-agent-name" class="text-sm text-slate-500 mb-4"></p>
+            <input type="hidden" id="stock-agent-id">
+            <label class="block text-xs font-medium text-slate-700 mb-1">Cantidad de Bolsas</label>
+            <input type="number" id="stock-qty" class="w-full p-2 border rounded-md mb-4" min="1">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('stockModal')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md">Cancelar</button>
+                <button onclick="confirmStockDelivery()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Confirmar Entrega</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ESTADO INICIAL Y CONFIGURACIÓN ---
+        const DEFAULT_CONFIG = {
+            bagPrice: 50,
+            bagsPerPackage: 29,
+            commAgent: 200, // Por paquete
+            commPos: 100,   // Por paquete
+            commOwner: 50   // Por paquete
+        };
+
+        // Estado Global
+        let state = {
+            config: JSON.parse(localStorage.getItem('coffee_config')) || DEFAULT_CONFIG,
+            agents: JSON.parse(localStorage.getItem('coffee_agents')) || [],
+            pos: JSON.parse(localStorage.getItem('coffee_pos')) || [],
+            sales: JSON.parse(localStorage.getItem('coffee_sales')) || [],
+            liquidations: JSON.parse(localStorage.getItem('coffee_liquidations')) || [],
+            deliveries: JSON.parse(localStorage.getItem('coffee_deliveries')) || []
+        };
+
+        // Instancias de Gráficos
+        let salesChartInstance = null;
+        let profitChartInstance = null;
+
+        // --- FUNCIONES DE PERSISTENCIA ---
+        function saveData() {
+            localStorage.setItem('coffee_config', JSON.stringify(state.config));
+            localStorage.setItem('coffee_agents', JSON.stringify(state.agents));
+            localStorage.setItem('coffee_pos', JSON.stringify(state.pos));
+            localStorage.setItem('coffee_sales', JSON.stringify(state.sales));
+            localStorage.setItem('coffee_liquidations', JSON.stringify(state.liquidations));
+            localStorage.setItem('coffee_deliveries', JSON.stringify(state.deliveries));
+            renderAll();
+        }
+
+        // --- NAVEGACIÓN ---
+        function nav(sectionId) {
+            document.querySelectorAll('.section-content').forEach(el => el.classList.remove('active'));
+            const section = document.getElementById(sectionId);
+            if(section) section.classList.add('active');
+            
+            // Cerrar menú móvil si está abierto
+            document.getElementById('mobile-menu').classList.add('hidden');
+
+            // Actualizar gráficos si vamos al dashboard
+            if (sectionId === 'dashboard') updateCharts();
+        }
+
+        function toggleMobileMenu() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        // --- LÓGICA DE NEGOCIO ---
+
+        // Configuración
+        function loadConfig() {
+            document.getElementById('conf-price').value = state.config.bagPrice;
+            document.getElementById('conf-packsize').value = state.config.bagsPerPackage;
+            document.getElementById('conf-comm-agent').value = state.config.commAgent;
+            document.getElementById('conf-comm-pos').value = state.config.commPos;
+            document.getElementById('conf-comm-owner').value = state.config.commOwner;
+        }
+
+        function saveSettings(e) {
+            e.preventDefault();
+            state.config = {
+                bagPrice: parseFloat(document.getElementById('conf-price').value),
+                bagsPerPackage: parseFloat(document.getElementById('conf-packsize').value),
+                commAgent: parseFloat(document.getElementById('conf-comm-agent').value),
+                commPos: parseFloat(document.getElementById('conf-comm-pos').value),
+                commOwner: parseFloat(document.getElementById('conf-comm-owner').value),
+            };
+            saveData();
+            alert('Configuración guardada.');
+        }
+
+        // Gestión de Agentes/Vendedores
+        function addAgent() {
+            const name = document.getElementById('new-agent-name').value;
+            if (!name) return;
+            state.agents.push({ id: Date.now(), name, stock: 0 });
+            document.getElementById('new-agent-name').value = '';
+            closeModal('agentModal');
+            saveData();
+        }
+
+        // Gestión de POS
+        function addPos() {
+            const name = document.getElementById('new-pos-name').value;
+            if (!name) return;
+            state.pos.push({ id: Date.now(), name });
+            document.getElementById('new-pos-name').value = '';
+            closeModal('posModal');
+            saveData();
+        }
+
+        // Entrega de Inventario
+        function openStockModal(agentId, agentName) {
+            document.getElementById('stock-agent-name').innerText = `Vendedor: ${agentName}`;
+            document.getElementById('stock-agent-id').value = agentId;
+            openModal('stockModal');
+        }
+
+        function confirmStockDelivery() {
+            const agentId = parseInt(document.getElementById('stock-agent-id').value);
+            const qty = parseInt(document.getElementById('stock-qty').value);
+            if (qty <= 0) return;
+
+            state.deliveries.push({
+                id: Date.now(),
+                agentId,
+                qty,
+                date: new Date().toISOString()
+            });
+            
+            document.getElementById('stock-qty').value = '';
+            closeModal('stockModal');
+            saveData();
+        }
+
+        // Registro de Ventas
+        function handleSaleSubmit(e) {
+            e.preventDefault();
+            const agentId = parseInt(document.getElementById('sale-agent').value);
+            const posId = parseInt(document.getElementById('sale-pos').value);
+            const qty = parseInt(document.getElementById('sale-qty').value);
+
+            if (!agentId || !posId || qty <= 0) return;
+
+            // Calcular comisiones unitarias basadas en el modelo por paquete
+            const unitCommAgent = state.config.commAgent / state.config.bagsPerPackage;
+            const unitCommPos = state.config.commPos / state.config.bagsPerPackage;
+            const unitCommOwner = state.config.commOwner / state.config.bagsPerPackage;
+
+            state.sales.push({
+                id: Date.now(),
+                date: new Date().toISOString(),
+                agentId,
+                posId,
+                qty,
+                revenue: qty * state.config.bagPrice,
+                profitAgent: qty * unitCommAgent,
+                profitPos: qty * unitCommPos,
+                profitOwner: qty * unitCommOwner
+            });
+
+            document.getElementById('salesForm').reset();
+            document.getElementById('sale-preview').innerText = 'Venta registrada con éxito';
+            saveData();
+        }
+
+        // Liquidación POS
+        function handleLiquidation(e) {
+            e.preventDefault();
+            const posId = parseInt(document.getElementById('liq-pos').value);
+            const amount = parseFloat(document.getElementById('liq-amount').value);
+            const payer = document.getElementById('liq-payer').value;
+            const receiver = document.getElementById('liq-receiver').value;
+
+            if (!posId || amount <= 0) return;
+
+            state.liquidations.push({
+                id: Date.now(),
+                date: new Date().toISOString(),
+                posId,
+                amount,
+                payer,
+                receiver
+            });
+
+            e.target.reset();
+            saveData();
+            alert('Liquidación registrada correctamente.');
+        }
+
+        // --- RENDERIZADO Y CÁLCULOS ---
+
+        function getAgentMetrics(agentId) {
+            const delivered = state.deliveries.filter(d => d.agentId === agentId).reduce((sum, d) => sum + d.qty, 0);
+            const sold = state.sales.filter(s => s.agentId === agentId).reduce((sum, s) => sum + s.qty, 0);
+            return { delivered, sold, stock: delivered - sold };
+        }
+
+        function getPosMetrics(posId) {
+            const sales = state.sales.filter(s => s.posId === posId);
+            const totalRevenue = sales.reduce((sum, s) => sum + s.revenue, 0);
+            // La deuda del POS es el total vendido menos lo que ya ha liquidado
+            const paid = state.liquidations.filter(l => l.posId === posId).reduce((sum, l) => sum + l.amount, 0);
+            return { totalRevenue, debt: totalRevenue - paid };
+        }
+
+        function renderAll() {
+            renderDashboard();
+            renderSelects();
+            renderInventoryTable();
+            renderPosTable();
+            renderLiquidationHistory();
+            renderRecentSales();
+        }
+
+        function renderSelects() {
+            // Vendedores
+            const agentSelect = document.getElementById('sale-agent');
+            agentSelect.innerHTML = '<option value="">Seleccione Vendedor...</option>';
+            state.agents.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.innerText = a.name;
+                agentSelect.appendChild(opt);
+            });
+
+            // POS
+            const posSelects = [document.getElementById('sale-pos'), document.getElementById('liq-pos')];
+            posSelects.forEach(select => {
+                if(!select) return;
+                select.innerHTML = '<option value="">Seleccione Punto de Venta...</option>';
+                state.pos.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.innerText = p.name;
+                    select.appendChild(opt);
+                });
+            });
+        }
+
+        function updateDebtPreview() {
+            const posId = parseInt(document.getElementById('liq-pos').value);
+            if (!posId) {
+                document.getElementById('liq-debt-preview').innerText = `Deuda Actual: $0`;
+                return;
+            }
+            const metrics = getPosMetrics(posId);
+            document.getElementById('liq-debt-preview').innerText = `Deuda Actual: $${metrics.debt.toLocaleString()}`;
+        }
+
+        function renderInventoryTable() {
+            const tbody = document.getElementById('inventory-table');
+            tbody.innerHTML = '';
+            state.agents.forEach(a => {
+                const m = getAgentMetrics(a.id);
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${a.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-slate-500">${m.delivered}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-green-600 font-bold">${m.sold}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-bold ${m.stock < 5 ? 'text-red-600' : 'text-slate-600'}">${m.stock}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="openStockModal(${a.id}, '${a.name}')" class="text-blue-600 hover:text-blue-900">Entregar +</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderPosTable() {
+            const tbody = document.getElementById('pos-status-table');
+            tbody.innerHTML = '';
+            state.pos.forEach(p => {
+                const m = getPosMetrics(p.id);
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">${p.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-500">$${m.totalRevenue.toLocaleString()}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold ${m.debt > 0 ? 'text-red-600' : 'text-green-600'}">$${m.debt.toLocaleString()}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                            <button onclick="nav('liquidation'); document.getElementById('liq-pos').value=${p.id}; updateDebtPreview();" class="text-indigo-600 hover:text-indigo-900">Liquidar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderLiquidationHistory() {
+            const tbody = document.getElementById('liquidation-history-table');
+            tbody.innerHTML = '';
+            // Últimas 10
+            state.liquidations.slice().reverse().slice(0, 10).forEach(l => {
+                const posName = state.pos.find(p => p.id === l.posId)?.name || 'Desconocido';
+                tbody.innerHTML += `
+                    <tr class="bg-white border-b hover:bg-slate-50">
+                        <td class="px-4 py-3 font-medium text-slate-900">${new Date(l.date).toLocaleString()}</td>
+                        <td class="px-4 py-3">${posName}</td>
+                        <td class="px-4 py-3 text-emerald-600 font-bold">$${l.amount.toLocaleString()}</td>
+                        <td class="px-4 py-3 text-xs text-slate-500">${l.payer} ➔ ${l.receiver}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderRecentSales() {
+            const tbody = document.getElementById('recent-sales-table');
+            tbody.innerHTML = '';
+            state.sales.slice().reverse().slice(0, 5).forEach(s => {
+                const agentName = state.agents.find(a => a.id === s.agentId)?.name || '---';
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-slate-500">${new Date(s.date).toLocaleDateString()}</td>
+                        <td class="px-6 py-4 text-sm text-slate-900 font-medium">${agentName}</td>
+                        <td class="px-6 py-4 text-center text-sm text-slate-700">${s.qty}</td>
+                        <td class="px-6 py-4 text-right text-sm text-emerald-600 font-bold">$${Math.floor(s.profitOwner).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderDashboard() {
+            const totalRevenue = state.sales.reduce((sum, s) => sum + s.revenue, 0);
+            const totalProfit = state.sales.reduce((sum, s) => sum + s.profitOwner, 0);
+            const totalBags = state.sales.reduce((sum, s) => sum + s.qty, 0);
+            
+            // Deuda total de todos los POS
+            let totalDebt = 0;
+            state.pos.forEach(p => totalDebt += getPosMetrics(p.id).debt);
+
+            document.getElementById('kpi-revenue').innerText = `$${totalRevenue.toLocaleString()}`;
+            document.getElementById('kpi-profit').innerText = `$${Math.floor(totalProfit).toLocaleString()}`;
+            document.getElementById('kpi-debt').innerText = `$${totalDebt.toLocaleString()}`;
+            document.getElementById('kpi-bags').innerText = totalBags;
+        }
+
+        function updateCharts() {
+            const ctx1 = document.getElementById('salesChart');
+            if(!ctx1) return;
+            const ctx1Context = ctx1.getContext('2d');
+            
+            const agentLabels = state.agents.map(a => a.name);
+            const agentData = state.agents.map(a => state.sales.filter(s => s.agentId === a.id).reduce((sum, s) => sum + s.qty, 0));
+
+            if (salesChartInstance) salesChartInstance.destroy();
+            salesChartInstance = new Chart(ctx1Context, {
+                type: 'bar',
+                data: {
+                    labels: agentLabels,
+                    datasets: [{
+                        label: 'Bolsas Vendidas',
+                        data: agentData,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            const ctx2 = document.getElementById('profitChart');
+            if(!ctx2) return;
+            const ctx2Context = ctx2.getContext('2d');
+            
+            const totalOwner = state.sales.reduce((sum, s) => sum + s.profitOwner, 0);
+            const totalAgent = state.sales.reduce((sum, s) => sum + s.profitAgent, 0);
+            const totalPos = state.sales.reduce((sum, s) => sum + s.profitPos, 0);
+
+            if (profitChartInstance) profitChartInstance.destroy();
+            profitChartInstance = new Chart(ctx2Context, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Dueño (Neto)', 'Comisión Vendedores', 'Comisión POS'],
+                    datasets: [{
+                        data: [totalOwner, totalAgent, totalPos],
+                        backgroundColor: ['#10b981', '#f59e0b', '#6366f1']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        // --- INICIALIZACIÓN ---
+        window.onload = function() {
+            loadConfig();
+            renderAll();
+        };
+
+        // Listeners para inputs de ventas para actualizar preview
+        document.getElementById('sale-qty').addEventListener('input', function(e) {
+            const qty = parseInt(e.target.value) || 0;
+            const unitProfit = state.config.commOwner / state.config.bagsPerPackage;
+            document.getElementById('sale-preview').innerText = `Ganancia Neta Estimada: $${Math.floor(qty * unitProfit).toLocaleString()}`;
+        });
+
+    </script>
+</body>
+</html>
