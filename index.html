@@ -4,7 +4,32 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Control de Ventas - Auditoría y Reportes</title>
-  <link rel="stylesheet" href="styles.css">
+  <!-- Estilos embebidos para tener un solo archivo -->
+  <style>
+    /* Estilos simples para presentación */
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    body{margin:0;background:#f6f8fa;color:#111;}
+    .container{max-width:1000px;margin:24px auto;padding:16px;}
+    .card{background:white;padding:16px;margin:12px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+    h1,h2{margin:0 0 12px 0;}
+    form label{display:block;margin:6px 0;font-size:14px;}
+    input,select,button{padding:8px;margin-top:4px;border-radius:4px;border:1px solid #ccc;}
+    button{cursor:pointer;background:#0366d6;color:white;border:none;}
+    .small-btn{background:#28a745;padding:6px 8px;font-size:13px;border-radius:6px;}
+    .danger-btn{background:#d73a49;padding:6px 8px;font-size:13px;border-radius:6px;}
+    .flex-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .spaced{margin-top:8px;}
+    .data-table{width:100%;border-collapse:collapse;margin-top:8px;}
+    .data-table th, .data-table td{border:1px solid #e1e4e8;padding:8px;font-size:13px;text-align:left;}
+    .muted{color:#666;font-size:13px;}
+    .actions-cell{display:flex;gap:8px;}
+    @media (max-width:700px){
+      .container{padding:10px;}
+      input,select,button{width:100%;}
+      .actions-cell{flex-direction:column;}
+    }
+  </style>
+
   <!-- jsPDF y autoTable desde CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
@@ -15,47 +40,71 @@
 
     <section class="card">
       <h2>Asignar producto a vendedor</h2>
-      <form id="form-assign">
-        <label>Producto: <input type="text" id="assign-product" required></label>
-        <label>Vendedor: <input type="text" id="assign-seller" required></label>
-        <label>Asignado por: <input type="text" id="assign-by" required></label>
-        <label>Nota (opcional): <input type="text" id="assign-note"></label>
-        <button type="submit">Asignar producto</button>
+      <form id="form-assign" class="spaced">
+        <div class="flex-row">
+          <label style="flex:1">Producto: <input type="text" id="assign-product" required></label>
+          <label style="flex:1">Vendedor: <input type="text" id="assign-seller" required></label>
+        </div>
+        <div class="flex-row">
+          <label style="flex:1">Asignado por: <input type="text" id="assign-by" required></label>
+          <label style="flex:1">Nota (opcional): <input type="text" id="assign-note"></label>
+        </div>
+        <div class="spaced">
+          <button type="submit">Asignar producto</button>
+        </div>
       </form>
     </section>
 
     <section class="card">
       <h2>Registrar entrada / liquidación</h2>
-      <form id="form-movement">
-        <label>Producto: <input type="text" id="mov-product" required></label>
-        <label>Cantidad: <input type="number" id="mov-qty" required value="1"></label>
-        <label>Tipo:
-          <select id="mov-type">
-            <option value="entrada">entrada</option>
-            <option value="salida">salida</option>
-            <option value="liquidacion">liquidacion</option>
-          </select>
-        </label>
-        <label>Registrado por: <input type="text" id="mov-user" required></label>
-        <label>Referencia (opcional): <input type="text" id="mov-ref"></label>
-        <button type="submit">Registrar movimiento</button>
+      <form id="form-movement" class="spaced">
+        <div class="flex-row">
+          <label style="flex:1">Producto: <input type="text" id="mov-product" required></label>
+          <label style="width:140px">Cantidad: <input type="number" id="mov-qty" required value="1" min="1"></label>
+        </div>
+        <div class="flex-row">
+          <label style="flex:1">Tipo:
+            <select id="mov-type">
+              <option value="entrada">Entrada (stock)</option>
+              <option value="entrada_pv">Entrada (punto de venta)</option>
+              <option value="salida">Salida</option>
+              <option value="liquidacion">Liquidación</option>
+            </select>
+          </label>
+          <label style="flex:1">Registrado por: <input type="text" id="mov-user" required></label>
+          <label style="flex:1">Referencia (opcional): <input type="text" id="mov-ref"></label>
+        </div>
+        <div class="spaced">
+          <button type="submit">Registrar movimiento</button>
+        </div>
       </form>
     </section>
 
     <section class="card">
       <h2>Filtrar y exportar reporte</h2>
-      <label>Desde: <input type="date" id="filter-from"></label>
-      <label>Hasta: <input type="date" id="filter-to"></label>
-      <button id="btn-filter">Aplicar filtro</button>
-      <button id="btn-clear">Limpiar filtro</button>
-      <button id="btn-export">Exportar PDF</button>
+      <div class="flex-row">
+        <label>Desde: <input type="date" id="filter-from"></label>
+        <label>Hasta: <input type="date" id="filter-to"></label>
+        <button id="btn-filter">Aplicar filtro</button>
+        <button id="btn-clear" class="danger-btn">Limpiar filtro</button>
+        <button id="btn-export" class="small-btn">Exportar PDF</button>
+      </div>
+      <p class="muted">Los registros se guardan en tu navegador (localStorage). Fechas almacenadas en UTC, mostradas en tu hora local.</p>
     </section>
 
     <section class="card">
       <h2>Asignaciones</h2>
       <table id="table-assignments" class="data-table">
         <thead>
-          <tr><th>Fecha</th><th>Producto</th><th>Vendedor</th><th>Asignado por</th><th>Nota</th></tr>
+          <tr>
+            <th>Fecha asignación</th>
+            <th>Entregado</th>
+            <th>Producto</th>
+            <th>Vendedor</th>
+            <th>Asignado por</th>
+            <th>Nota</th>
+            <th>Acciones</th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -72,6 +121,287 @@
     </section>
   </main>
 
-  <script src="app.js"></script>
+  <script>
+    // Single-file app: localStorage + timestamps + PDF export
+    (function () {
+      const ASSIGN_KEY = 'cv_assignments';
+      const MOV_KEY = 'cv_movements';
+
+      // Genera un id simple
+      function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+      function read(key) {
+        try { return JSON.parse(localStorage.getItem(key) || '[]'); }
+        catch(e){ return []; }
+      }
+      function write(key, arr) { localStorage.setItem(key, JSON.stringify(arr)); }
+
+      // Añadir asignación (created_at almacenado)
+      function addAssignment({product, seller, assignedBy, note}) {
+        const rec = {
+          id: genId(),
+          product: product || '',
+          seller: seller || '',
+          assigned_by: assignedBy || '',
+          note: note || '',
+          created_at: new Date().toISOString(), // asignación
+          delivered_at: null // inicialmente no entregado
+        };
+        const arr = read(ASSIGN_KEY);
+        arr.unshift(rec);
+        write(ASSIGN_KEY, arr);
+        return rec;
+      }
+
+      // Marcar entrega (delivered_at)
+      function markDelivered(id) {
+        const arr = read(ASSIGN_KEY);
+        const idx = arr.findIndex(r => r.id === id);
+        if(idx === -1) return null;
+        arr[idx].delivered_at = new Date().toISOString();
+        write(ASSIGN_KEY, arr);
+        return arr[idx];
+      }
+
+      // Añadir movimiento
+      function addMovement({product, quantity, movement_type, user, reference}) {
+        const rec = {
+          id: genId(),
+          product: product || '',
+          quantity: Number(quantity) || 0,
+          movement_type: movement_type || 'entrada',
+          user: user || '',
+          reference: reference || '',
+          created_at: new Date().toISOString()
+        };
+        const arr = read(MOV_KEY);
+        arr.unshift(rec);
+        write(MOV_KEY, arr);
+        return rec;
+      }
+
+      // Formatea ISO -> local legible
+      function toLocal(dtIso) {
+        if(!dtIso) return '';
+        const d = new Date(dtIso);
+        return d.getFullYear() + '-' +
+          String(d.getMonth()+1).padStart(2,'0') + '-' +
+          String(d.getDate()).padStart(2,'0') + ' ' +
+          String(d.getHours()).padStart(2,'0') + ':' +
+          String(d.getMinutes()).padStart(2,'0') + ':' +
+          String(d.getSeconds()).padStart(2,'0');
+      }
+
+      // Escape HTML básico
+      function escapeHtml(str){
+        if(str === null || str === undefined) return '';
+        return String(str).replace(/[&<>"']/g, function(ch){
+          return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
+        });
+      }
+
+      // Mapear tipo a etiqueta legible
+      function tipoLabel(t){
+        switch(t){
+          case 'entrada_pv': return 'Entrada (punto de venta)';
+          case 'entrada': return 'Entrada (stock)';
+          case 'salida': return 'Salida';
+          case 'liquidacion': return 'Liquidación';
+          default: return t;
+        }
+      }
+
+      // Render de tablas con filtro opcional (YYYY-MM-DD)
+      function renderTables(fromDate, toDate) {
+        const assigns = read(ASSIGN_KEY);
+        const movs = read(MOV_KEY);
+        const tbodyA = document.querySelector('#table-assignments tbody');
+        const tbodyM = document.querySelector('#table-movements tbody');
+        tbodyA.innerHTML = '';
+        tbodyM.innerHTML = '';
+
+        let fromTs = null, toTs = null;
+        if(fromDate) fromTs = new Date(fromDate + 'T00:00:00').getTime();
+        if(toDate) toTs = new Date(toDate + 'T23:59:59').getTime();
+
+        function inRange(iso) {
+          if(!fromTs && !toTs) return true;
+          const t = new Date(iso).getTime();
+          if(fromTs && t < fromTs) return false;
+          if(toTs && t > toTs) return false;
+          return true;
+        }
+
+        assigns.filter(a => inRange(a.created_at)).forEach(a => {
+          const tr = document.createElement('tr');
+          const deliveredCell = a.delivered_at ? escapeHtml(toLocal(a.delivered_at)) : '<span class="muted">No entregado</span>';
+          const actions = a.delivered_at ? '' : `<div class="actions-cell"><button class="small-btn" data-action="deliver" data-id="${a.id}">Marcar entregado</button></div>`;
+          tr.innerHTML = `<td>${escapeHtml(toLocal(a.created_at))}</td><td>${deliveredCell}</td><td>${escapeHtml(a.product)}</td><td>${escapeHtml(a.seller)}</td><td>${escapeHtml(a.assigned_by)}</td><td>${escapeHtml(a.note)}</td><td>${actions}</td>`;
+          tbodyA.appendChild(tr);
+        });
+
+        movs.filter(m => inRange(m.created_at)).forEach(m => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${escapeHtml(toLocal(m.created_at))}</td><td>${escapeHtml(m.product)}</td><td>${escapeHtml(String(m.quantity))}</td><td>${escapeHtml(tipoLabel(m.movement_type))}</td><td>${escapeHtml(m.user)}</td><td>${escapeHtml(m.reference)}</td>`;
+          tbodyM.appendChild(tr);
+        });
+
+        // Delegación para botones "Marcar entregado"
+        document.querySelectorAll('button[data-action="deliver"]').forEach(btn => {
+          btn.addEventListener('click', function(){
+            const id = this.getAttribute('data-id');
+            if(!confirm('Marcar este producto como ENTREGADO al vendedor?')) return;
+            markDelivered(id);
+            const from = get('#filter-from').value;
+            const to = get('#filter-to').value;
+            renderTables(from, to);
+          });
+        });
+      }
+
+      // Exportar PDF (datos filtrados)
+      async function exportPdf(fromDate, toDate) {
+        const assigns = read(ASSIGN_KEY);
+        const movs = read(MOV_KEY);
+
+        let fromTs = null, toTs = null;
+        if(fromDate) fromTs = new Date(fromDate + 'T00:00:00').getTime();
+        if(toDate) toTs = new Date(toDate + 'T23:59:59').getTime();
+        function inRange(iso) {
+          if(!fromTs && !toTs) return true;
+          const t = new Date(iso).getTime();
+          if(fromTs && t < fromTs) return false;
+          if(toTs && t > toTs) return false;
+          return true;
+        }
+
+        const filteredAssigns = assigns.filter(a => inRange(a.created_at));
+        const filteredMovs = movs.filter(m => inRange(m.created_at));
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p','pt','a4');
+        const margin = 40;
+        let y = 40;
+
+        doc.setFontSize(14);
+        doc.text('Reporte general — Control de Ventas', margin, y);
+        y += 20;
+        const rangeText = (fromDate || '') + (fromDate && toDate ? ' ↔ ' + toDate : (toDate ? ' ← ' + toDate: ''));
+        doc.setFontSize(10);
+        doc.text('Rango: ' + (rangeText || 'Todos los registros'), margin, y);
+        y += 18;
+
+        // Asignaciones
+        doc.setFontSize(12);
+        doc.text('Asignaciones', margin, y);
+        y += 8;
+
+        const assignBody = filteredAssigns.map(a => [
+          toLocal(a.created_at),
+          a.delivered_at ? toLocal(a.delivered_at) : 'No entregado',
+          a.product,
+          a.seller,
+          a.assigned_by,
+          a.note || ''
+        ]);
+        if(assignBody.length === 0) {
+          doc.setFontSize(10);
+          doc.text('No hay asignaciones en este rango.', margin, y + 16);
+          y += 36;
+        } else {
+          doc.autoTable({
+            head: [['Fecha asignación','Entregado','Producto','Vendedor','Asignado por','Nota']],
+            body: assignBody,
+            startY: y + 10,
+            margin: {left: margin, right: margin},
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [40, 40, 40] }
+          });
+          y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : y + 200;
+        }
+
+        // Movimientos
+        doc.setFontSize(12);
+        doc.text('Movimientos', margin, y);
+        y += 8;
+
+        const movBody = filteredMovs.map(m => [
+          toLocal(m.created_at), m.product, String(m.quantity), tipoLabel(m.movement_type), m.user, m.reference || ''
+        ]);
+        if(movBody.length === 0) {
+          doc.setFontSize(10);
+          doc.text('No hay movimientos en este rango.', margin, y + 16);
+        } else {
+          doc.autoTable({
+            head: [['Fecha','Producto','Cantidad','Tipo','Usuario','Referencia']],
+            body: movBody,
+            startY: y + 10,
+            margin: {left: margin, right: margin},
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [40,40,40] }
+          });
+        }
+
+        doc.save('reporte_general.pdf');
+      }
+
+      // Hooks de formularios
+      document.getElementById('form-assign').addEventListener('submit', function(e){
+        e.preventDefault();
+        const product = document.getElementById('assign-product').value.trim();
+        const seller = document.getElementById('assign-seller').value.trim();
+        const assignedBy = document.getElementById('assign-by').value.trim();
+        const note = document.getElementById('assign-note').value.trim();
+        if(!product || !seller || !assignedBy) { alert('Completa los campos obligatorios'); return; }
+        addAssignment({product, seller, assignedBy, note});
+        this.reset();
+        renderTables(get('#filter-from').value, get('#filter-to').value);
+      });
+
+      document.getElementById('form-movement').addEventListener('submit', function(e){
+        e.preventDefault();
+        const product = document.getElementById('mov-product').value.trim();
+        const qty = document.getElementById('mov-qty').value;
+        const type = document.getElementById('mov-type').value;
+        const user = document.getElementById('mov-user').value.trim();
+        const ref = document.getElementById('mov-ref').value.trim();
+        if(!product || !qty || !user) { alert('Completa los campos obligatorios'); return; }
+        addMovement({product, quantity: qty, movement_type: type, user, reference: ref});
+        this.reset();
+        renderTables(get('#filter-from').value, get('#filter-to').value);
+      });
+
+      // Filtros y export
+      document.getElementById('btn-filter').addEventListener('click', function(){
+        const from = get('#filter-from').value;
+        const to = get('#filter-to').value;
+        renderTables(from, to);
+      });
+      document.getElementById('btn-clear').addEventListener('click', function(){
+        get('#filter-from').value = '';
+        get('#filter-to').value = '';
+        renderTables();
+      });
+      document.getElementById('btn-export').addEventListener('click', function(){
+        const from = get('#filter-from').value;
+        const to = get('#filter-to').value;
+        exportPdf(from, to);
+      });
+
+      function get(sel){ return document.querySelector(sel); }
+
+      // Render inicial
+      renderTables();
+
+      // Exponer helpers para debug en consola (opcional)
+      window.cv = {
+        addAssignment, addMovement,
+        markDelivered,
+        readAssignments: ()=>read(ASSIGN_KEY),
+        readMovements: ()=>read(MOV_KEY)
+      };
+
+    })();
+  </script>
 </body>
 </html>
